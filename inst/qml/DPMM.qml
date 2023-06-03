@@ -22,7 +22,10 @@ Form {
 	VariablesForm{
 		preferredHeight: jaspTheme.smallDefaultVariablesFormHeight
 		AvailableVariablesList { name: "allVariablesList" }
-		AssignedVariablesList { name: "dependent"; title: qsTr("Dependent Variable"); suggestedColumns: ["scale"] ; singleVariable:		true}
+		AssignedVariablesList { name: "dependent"; 
+								title: qsTr("Dependent Variable"); 
+								suggestedColumns: ["scale"] ; 
+								singleVariable:	true}
 	}
 
 	CheckBox
@@ -62,7 +65,7 @@ Section{
 		DoubleField
 		{
 			name:			"alpha0"
-			label:			qsTr("alpha0")
+			label:			qsTr("alpha0 (Shape)")
 			defaultValue:	1
 			min:			0.1
 			decimals:		1
@@ -71,15 +74,16 @@ Section{
 		DoubleField
 		{
 			name:			"beta0"
-			label:			qsTr("beta0")
+			label:			qsTr("beta0 (Scale)")
 			defaultValue:	1
 			min:			0.1
 			decimals:		1
 		}
 		
 		CheckBox{
-		name: "plotvalues"
+		name: "plotprior"
 		label:			qsTr("plot distribution")
+		checked: true
 	}
 		}
 	
@@ -100,14 +104,14 @@ Section{
 			name:			"mcmcBurnin"
 			id:				warmup
 			label:			qsTr("Burnin")
-			defaultValue:	500
-			min:			100
+			defaultValue:	100
+			min:			30
 		}
 	IntegerField
 		{
 			name:			"mcmcSamples"
 			label:			qsTr("Samples")
-			defaultValue:	4000
+			defaultValue:	200
 			min:			parseInt(warmup.value) + 100
 		}		
 	
@@ -140,7 +144,7 @@ Section{
 	}
 
 	Section{
-		title: qsTr("Plots")
+		title: qsTr("Plots and tables")
 CheckBox
 		{
 			name: "traceplots"
@@ -157,6 +161,12 @@ CheckBox
 		{
 			name: "clusterdensityplot"
 			label: qsTr("Plot density clusters")
+			checked: true
+		}
+CheckBox
+		{
+			name: "tablecluster"
+			label: qsTr(" Table of cluster means and standard deviations")
 			checked: true
 		}
 		
