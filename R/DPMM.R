@@ -1,36 +1,40 @@
-DPMM <- function(jaspResults,options, dataset) {
+DPMM <- function(jaspResults, options, dataset) {
   ready <- (length(options$dependent) == 1)
-  
-  if(ready) {
+  if (ready) {
     dataset <- .DPMMReadData(options, dataset)
   }
   
   .plotpriordens(options, jaspResults)
-
-  return()   
+  DPMMContainer <- .getDPMMContainer(jaspResults)
+  DPMMContainer[["model"]] <- .DPMMModelContainer(DPMMContainer, options, ready, dataset)
+  
+  return(jaspResults)   
 }
 
 .DPMMReadData <- function(options,dataset) {
-  
+  # read data
   if (!is.null(dataset)) {
     return(dataset)
   } else {
- dataset <- return(.readDataSetToEnd(columns.as.numeric  = options$dependent))
- .scaledependent(dataset,options)
+    dataset <- .readDataSetToEnd(columns.as.numeric = options$dependent)
+    dataset <- .scaledependent(dataset, options)
+    dataset <- as.numeric(dataset)
+    return(dataset)
   }
-  return()
 }
+
 
 .scaledependent <- function(dataset, options) {
-  if(options$scaledependent == TRUE) {
-    dataset <- stats::scale(dataset)
-    return(dataset)
-  } else {
-    return(dataset)
+  # scale data
+  if (options$scaledependent == TRUE) {
+    dataset <- scale(dataset)
   }
+  return(dataset)
 }
 
+
 .plotpriordens <- function(options, jaspResults) {
+  # plot prior
   if (options$plotprior == TRUE && is.null(jaspResults[["plotprior"]])) {
       jaspResults[["plotprior"]]$object
       # Create Jasp plot
@@ -48,8 +52,9 @@ DPMM <- function(jaspResults,options, dataset) {
   return()
 }
 
+
 .priorFillPlotDescriptives <- function(plotprior, options, jaspResults){
-  
+  # fill the plot
   # create inverse gamma distribution
   invgamma <- data.frame(Prior = MCMCpack::rinvgamma(n = 2000, shape = options$alpha0,scale = options$beta0))
   
@@ -65,3 +70,45 @@ DPMM <- function(jaspResults,options, dataset) {
   return(priorplot)
 }
 
+
+.getDPMMContainer <- function(jaspResults) {
+  if (is.null(jaspResults[["DPMMContainer"]])) {
+    #create container
+    DPMMContainer <- createJaspContainer(title = "Univariate Dirichlet Process Mixture Model",position = 1)
+    # we set the dependencies on the container, this means that all items inside the container automatically have these dependencies
+    DPMMContainer$dependOn(c("dependent", "scaledependent", "mu0", 
+                              "k0", "alpha0", "beta0",
+                              "mcmcBurnin", "mcmcSamples","alpha", 
+                              "kluster", "traceplots", "priorposteriorplot",
+                              "clusterdensityplot", "tablecluster"
+                              )
+                            )
+    jaspResults[["DPMMContainer"]] <- DPMMContainer
+  }
+  return(jaspResults[["DPMMContainer"]])
+}
+
+.DPMMModelContainer <- function(DPMMContainer, options, ready, dataset) {
+  if (ready && is.null(DPMMContainer[["model"]])) {
+    # Take results from state
+    model <- .DPMMModel(dataset, options)
+    print(model)
+    DPMMContainer[["model"]] <- createJaspState(model)
+    
+  }
+  return(model)
+}
+
+.DPMMModel <- function(dataset, options) {
+# Create the model as a prior mixture model
+dp<- dirichletprocess::DirichletProcessGaussian(dataset,
+                              g0Priors = c(options$mu0,options$k0,options$alpha0,options$beta0),
+                              alphaPriors = c(options$alpha,options$kluster))
+
+# Fit the model
+dpfit <- dirichletprocess::Fit(dp, its = options$mcmcSamples, progressBar = TRUE)
+dpburn <- dirichletprocess::Burn(dpfit, niter = options$mcmcBurnin)
+model <- dpburn
+return(model)
+}
+  
