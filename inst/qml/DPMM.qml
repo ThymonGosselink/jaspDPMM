@@ -153,25 +153,48 @@ CheckBox
 		}
 CheckBox
 		{
-			name: "priorposteriorplot"
+			name: "priorPosteriorPlot"
 			label: qsTr("Prior and Posterior plot")
 			checked: true
 		}
 CheckBox
 		{
-			name: "clusterdensityplot"
+			name: "clusterDensityPlot"
 			label: qsTr("Plot density clusters")
 			checked: true
 		}
+		
 CheckBox
-		{
-			name: "tablecluster"
-			label: qsTr(" Table of cluster means and standard deviations")
-			checked: true
-		}
+{
+name: "tableCluster";		label: qsTr("Table of cluster means and standard deviations")
+CheckBox { name: "clusterAdditionalInfo";		label: qsTr("Additional info"); checked: true }
+CIField  { name: "clusterCiLevel";	label: qsTr("Credible interval") }
+}
+		
 		
 	}
+
+	Section{
+	title:							qsTr("Export Results")
+
+	CheckBox 
+	{
+		id:							addPredictions
+		name:						"addPredictions"
+		text:						qsTr("Add predictions to data")
+
+		ComputedColumnField 
+		{
+			id:						predictionsColumn
+			name:					"predictionsColumn"
+			text:					qsTr("Column name")
+			placeholderText:		qsTr("e.g., predicted")
+			fieldWidth:				120
+			enabled:				addPredictions.checked
 		}
-	
+	}
+
+		}
+}
 
 
