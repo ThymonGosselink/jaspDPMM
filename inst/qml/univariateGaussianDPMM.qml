@@ -18,7 +18,7 @@ Form {
 		Group
 		{
 			title:		qsTr("Variable selection") 
-			id:	variableoptions
+			id:	variableOptions
 	VariablesForm{
 		preferredHeight: jaspTheme.smallDefaultVariablesFormHeight
 		AvailableVariablesList { name: "allVariablesList" }
@@ -30,10 +30,27 @@ Form {
 
 	CheckBox
 		{
-			name: "scaledependent"
+			name: "dependentScaled"
 			label: qsTr("Scale dependent variable (recommended to speed up convergence)")
 			checked: true
 		}
+
+		CheckBox 
+			{
+				name:							"setSeed"
+				text:							qsTr("Set seed")
+				childrenOnSameRow:				true
+				checked: true
+
+				IntegerField 
+				{
+					name:						"seed"
+					defaultValue:				123
+					min:						-999999
+					max:						999999
+					fieldWidth:					60
+				}
+			}
 		}
 	
 	
@@ -47,8 +64,8 @@ Section{
 
 		DoubleField
 		{
-			name:			"mu0"
-			label:			qsTr("mu0")
+			name:			"muPrior"
+			label:			qsTr("Mu")
 			defaultValue:	0
 			min:			-1000000000
 
@@ -56,16 +73,16 @@ Section{
 
 		IntegerField
 		{
-			name:			"k0"
-			label:			qsTr("k0")
+			name:			"kPrior"
+			label:			qsTr("K")
 			defaultValue:	1
 			min:			1
 		}
 		
 		DoubleField
 		{
-			name:			"alpha0"
-			label:			qsTr("alpha0 (Shape)")
+			name:			"alphaPrior"
+			label:			qsTr("Alpha (Shape)")
 			defaultValue:	1
 			min:			0.1
 			decimals:		1
@@ -73,16 +90,16 @@ Section{
 		
 		DoubleField
 		{
-			name:			"beta0"
-			label:			qsTr("beta0 (Scale)")
+			name:			"betaPrior"
+			label:			qsTr("Beta (Scale)")
 			defaultValue:	1
 			min:			0.1
 			decimals:		1
 		}
 		
 		CheckBox{
-		name: "plotprior"
-		label:			qsTr("plot distribution")
+		name: "priorPlot"
+		label:			qsTr("Plot Prior distribution")
 		checked: true
 	}
 		}
@@ -135,7 +152,7 @@ Section{
 		IntegerField
 		{
 			name:			"kluster"
-			label:			qsTr("amount of clusters at the start")
+			label:			qsTr("kluster")
 			defaultValue:	1
 			min:			1
 		}
@@ -147,7 +164,7 @@ Section{
 		title: qsTr("Plots and tables")
 CheckBox
 		{
-			name: "traceplots"
+			name: "tracePlots"
 			label: qsTr("Trace plot (convergence diagnostics)")
 			checked: true
 		}
@@ -166,7 +183,7 @@ CheckBox
 		
 CheckBox
 {
-name: "tableCluster";		label: qsTr("Table of cluster means and standard deviations")
+name: "tableCluster";		label: qsTr("Table of cluster means and standard deviations") ;checked: true
 CheckBox { name: "clusterAdditionalInfo";		label: qsTr("Additional info"); checked: true }
 CIField  { name: "clusterCiLevel";	label: qsTr("Credible interval") }
 }
@@ -182,18 +199,40 @@ CIField  { name: "clusterCiLevel";	label: qsTr("Credible interval") }
 		id:							addPredictions
 		name:						"addPredictions"
 		text:						qsTr("Add predictions to data")
+		checked: true
 
 		ComputedColumnField 
 		{
 			id:						predictionsColumn
 			name:					"predictionsColumn"
 			text:					qsTr("Column name")
-			placeholderText:		qsTr("e.g., predicted")
+			placeholderText:		qsTr("e.g., cluster")
 			fieldWidth:				120
 			enabled:				addPredictions.checked
 		}
 	}
+	
+Group{
+	FileSelector
+		{
+			id:						savePath
+			name:					"savePath"
+			label:					qsTr("Save as")
+			placeholderText:		qsTr("e.g., location/model.jaspML")
+			filter:					"*.jaspML"
+			save:					true
+			fieldWidth:				180 * preferencesModel.uiScale
+		}
 
+		CheckBox
+		{
+			id:						saveModel
+			name:					"saveModel"
+			text:					qsTr("Save trained model")
+			enabled:				showSave && savePath.value != ""
+			Layout.leftMargin:		10 * preferencesModel.uiScale
+		}
+}
 		}
 }
 

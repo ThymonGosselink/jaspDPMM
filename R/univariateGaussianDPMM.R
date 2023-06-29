@@ -1,17 +1,15 @@
-DPMM <- function(jaspResults, options, dataset) {
+univariateGaussianDPMM <- function(jaspResults, options, dataset) {
   
   DPMMContainer <- .getDPMMContainer(jaspResults, options)
   
-  .createPlotPriorDens(options, DPMMContainer)
+  .createPlotPriorDensity(options, DPMMContainer)
   
   ready <- (length(options$dependent) == 1)
   if (ready) {
     dataset <- .DPMMReadData(options, dataset)
-    .DPMMCheckErrors(options, dataset)
-  } else {
-    .DPMMCheckErrors(options, dataset)
   }
   
+  .DPMMCheckErrors(options, dataset)
   .DPMMModel(DPMMContainer, options, ready, dataset)
   
   .createTracePlots(DPMMContainer, options, ready)
@@ -22,6 +20,7 @@ DPMM <- function(jaspResults, options, dataset) {
   
   .createClusterTable(DPMMContainer, options, ready, dataset)
   
+  .clusterPredictionsToData(dataset, options, DPMMContainer, ready) 
   return()   
 }
 
@@ -38,16 +37,16 @@ DPMM <- function(jaspResults, options, dataset) {
     return(dataset)
   } else {
     dataset <- .readDataSetToEnd(columns.as.numeric = options$dependent)
-    dataset <- .scaledependent(dataset, options)
+    dataset <- .scaleDependent(dataset, options)
     dataset <- as.numeric(dataset)
     return(dataset)
   }
 }
 
 
-.scaledependent <- function(dataset, options) {
+.scaleDependent <- function(dataset, options) {
   # scale data
-  if (options$scaledependent == TRUE) {
+  if (options$dependentScaled) {
     dataset <- scale(dataset)
   } else { # added this line of code because if the scale function is not used the data might not be a matrix
     dataset <- as.matrix(dataset)
@@ -56,14 +55,7 @@ DPMM <- function(jaspResults, options, dataset) {
 }
 
 .DPMMCheckErrors <- function(options, dataset){
-  customCheck <- list(function(dataset, options) {
-    if(options$dependent == 0){
-      return(gettext("Add a variable!"))
-    }
-    return()
-  }
-  )
-  jaspBase::.hasErrors(dataset, type = c('observations', 'variance', 'infinity'), custom = customCheck,
+  jaspBase::.hasErrors(dataset, type = c('observations', 'variance', 'infinity'),
              all.target = options$dependent, observations.amount = c('< 3'), 
              exitAnalysisIfErrors = TRUE)
 }
@@ -73,8 +65,8 @@ DPMM <- function(jaspResults, options, dataset) {
     #create container
     DPMMContainer <- createJaspContainer(title = "Univariate Dirichlet Process Mixture Model",position = 1)
     # we set the dependencies on the container, this means that all items inside the container automatically have these dependencies
-    DPMMContainer$dependOn(c("dependent", "scaledependent", "mu0", 
-                             "k0", "alpha0", "beta0",
+    DPMMContainer$dependOn(c("dependent", "scaleDependent", "muPrior", 
+                             "kPrior", "alphaPrior", "betaPrior",
                              "mcmcBurnin", "mcmcSamples","alpha",
                              "kluster")
     )
@@ -84,33 +76,33 @@ DPMM <- function(jaspResults, options, dataset) {
 }
 
 
-.createPlotPriorDens <- function(options, DPMMContainer) {
+.createPlotPriorDensity <- function(options, DPMMContainer) {
   # plot prior
-  if (options$plotprior == FALSE | !is.null(DPMMContainer[["plotPrior"]])) {
+  if (!options$priorPlot || !is.null(DPMMContainer[["priorPlot"]])) {
     return()
   }
   
   # Create Jasp plot
-  plotPrior <- createJaspPlot(title = "Inverse Gamma Prior Plot",  width = 400, height = 500, position = 1)
+  priorPlot <- createJaspPlot(title = "Inverse Gamma Prior Plot",  width = 400, height = 500, position = 1)
   #dependencies
-  plotPrior$dependOn(options = c("plotPrior", "alpha0", "beta0"))
+  priorPlot$dependOn(options = c("priorPlot"))
   # todo: update citation naar 2023
-  plotPrior$addCitation("JASP Team (2018). JASP (Version  17.2.0) [Computer software].")
+  priorPlot$addCitation("JASP Team (2018). JASP (Version  17.2.0) [Computer software].")
   # now we assign the plot to jaspResults
-  DPMMContainer[["plotPrior"]] <- plotPrior
+  DPMMContainer[["priorPlot"]] <- priorPlot
   
   x <- seq(from=0.1, to=20, by=0.1)
-  invgamma <- data.frame(x = x, Prior = MCMCpack::dinvgamma(x,
-                                           shape = options$alpha0,
-                                           scale = options$beta0))
+  inverseGamma <- data.frame(x = x, Prior = MCMCpack::dinvgamma(x,
+                                           shape = options$alphaPrior,
+                                           scale = options$betaPrior))
   # plot distribution
-  p <- ggplot2::ggplot(invgamma, ggplot2::aes(x = x, y = Prior)) +
+  p <- ggplot2::ggplot(inverseGamma, ggplot2::aes(x = x, y = Prior)) +
     ggplot2::geom_line(color = "red", linewidth = 1) +
     ggplot2::geom_area(fill = "red", alpha = 0.5) +
     ggplot2::ggtitle("Inverse Gamma Prior") +
     ggplot2::ylab("Density")
   
-  plotPrior$plotObject <- p + 
+  priorPlot$plotObject <- p + 
     jaspGraphs::themeJaspRaw()
   return()
 }
@@ -120,15 +112,17 @@ DPMM <- function(jaspResults, options, dataset) {
     DPMMContainer[["model"]]$object
     # Take results from state
     # Create the model as a prior mixture model
-    set.seed(123)
+    if (options[["setSeed"]]) {
+    set.seed(options[["seed"]])
+  }
     dp<- dirichletprocess::DirichletProcessGaussian(dataset,
-                                                    g0Priors = c(options$mu0,options$k0,options$alpha0,options$beta0),
+                                                    g0Priors = c(options$muPrior,options$kPrior,options$alphaPrior,options$betaPrior),
                                                     alphaPriors = c(options$alpha,options$kluster))
     
     # Fit the model
-    dpfit <- dirichletprocess::Fit(dp, its = options$mcmcSamples, progressBar = TRUE)
-    dpburn <- dirichletprocess::Burn(dpfit, niter = options$mcmcBurnin)
-    model <- dpburn
+    dpFit <- dirichletprocess::Fit(dp, its = options$mcmcSamples, progressBar = TRUE)
+    dpBurn <- dirichletprocess::Burn(dpFit, niter = options$mcmcBurnin)
+    model <- dpBurn
     DPMMContainer[["model"]] <- createJaspState(object = model)
   }
   return()
@@ -136,58 +130,55 @@ DPMM <- function(jaspResults, options, dataset) {
 
 .createTracePlots <- function(DPMMContainer, options, ready){
   # Trace plots
-  if (options$traceplots == FALSE | !is.null(DPMMContainer[["tracePlotsContrainer"]])) {
+  if (!ready || !options$tracePlots || !is.null(DPMMContainer[["tracePlotsContrainer"]])) {
     return()
   }
   tracePlotsContrainer <- createJaspContainer(title = "Trace Plots",position = 3)
   # we set the dependencies on the container, this means that all items inside the container automatically have these dependencies
-  tracePlotsContrainer$dependOn(c("dependent", "scaledependent", "mu0", 
-                                  "k0", "alpha0", "beta0",
-                                  "mcmcBurnin", "mcmcSamples","alpha", 
-                                  "kluster"))
+  tracePlotsContrainer$dependOn(c("traceplots"))
   # save to DPMM container
   DPMMContainer[["tracePlotsContrainer"]] <- tracePlotsContrainer
   
   myModel <- DPMMContainer[["model"]]$object
   
     # Create Jasp plot for Alpha
-    tracePlotsAlpha <- createJaspPlot(title = "Trace Plot Alpha",  width = 400, height = 500)
+    tracePlotAlpha <- createJaspPlot(title = "Trace Plot Alpha",  width = 400, height = 500)
     #dependencies
-    tracePlotsAlpha$dependOn(options = "traceplots")
-    tracePlotsAlpha$addCitation("JASP Team (2023). JASP (Version  17.2.0) [Computer software].")
+    tracePlotAlpha$dependOn(options = "traceplots")
+    tracePlotAlpha$addCitation("JASP Team (2023). JASP (Version  17.2.0) [Computer software].")
     # now we assign the plot to jaspResults
-    tracePlotsContrainer[["tracePlotsAlpha"]] <- tracePlotsAlpha
+    tracePlotsContrainer[["tracePlotAlpha"]] <- tracePlotAlpha
     # Run fill the plot
-    tracePlotsAlpha$plotObject  <- dirichletprocess::AlphaTraceplot(myModel, gg = TRUE) +
+    tracePlotAlpha$plotObject  <- dirichletprocess::AlphaTraceplot(myModel, gg = TRUE) +
       jaspGraphs::themeJaspRaw()
     
     # Create Jasp plot for Cluster
-    tracePlotsCluster <- createJaspPlot(title = "Trace Plot Cluster",  width = 400, height = 500)
+    tracePlotCluster <- createJaspPlot(title = "Trace Plot Cluster",  width = 400, height = 500)
     #dependencies
-    tracePlotsCluster$dependOn(options = "traceplots")
-    tracePlotsCluster$addCitation("JASP Team (2023). JASP (Version  17.2.0) [Computer software].")
+    tracePlotCluster$dependOn(options = "tracePlots")
+    tracePlotCluster$addCitation("JASP Team (2023). JASP (Version  17.2.0) [Computer software].")
     # now we assign the plot to jaspResults
-    tracePlotsContrainer[["tracePlotsCluster"]] <- tracePlotsCluster
+    tracePlotsContrainer[["tracePlotCluster"]] <- tracePlotCluster
     # Run fill the plot
-    tracePlotsCluster$plotObject  <- dirichletprocess::ClusterTraceplot(myModel, gg = TRUE) +
+    tracePlotCluster$plotObject  <- dirichletprocess::ClusterTraceplot(myModel, gg = TRUE) +
       jaspGraphs::themeJaspRaw()
     
     # Create Jasp plot for likelihood
-    tracePlotsLikelihood <- createJaspPlot(title = "Trace Plot Likelihood",  width = 400, height = 500)
+    tracePlotLikelihood <- createJaspPlot(title = "Trace Plot Likelihood",  width = 400, height = 500)
     #dependencies
-    tracePlotsLikelihood$dependOn(options = "traceplots")
-    tracePlotsLikelihood$addCitation("JASP Team (2023). JASP (Version  17.2.0) [Computer software].")
+    tracePlotLikelihood$dependOn(options = "tracePlots")
+    tracePlotLikelihood$addCitation("JASP Team (2023). JASP (Version  17.2.0) [Computer software].")
     # now we assign the plot to jaspResults
-    tracePlotsContrainer[["tracePlotsLikelihood"]] <- tracePlotsLikelihood
+    tracePlotsContrainer[["tracePlotLikelihood"]] <- tracePlotLikelihood
     # Run fill the plot
-    tracePlotsLikelihood$plotObject  <- dirichletprocess::LikelihoodTraceplot(myModel, gg = TRUE) +
+    tracePlotLikelihood$plotObject  <- dirichletprocess::LikelihoodTraceplot(myModel, gg = TRUE) +
                                         jaspGraphs::themeJaspRaw()
   return()  
 }
 
 .createPriorPosteriorPlot <- function(DPMMContainer, options, ready){
   # Trace plots
-  if (options$priorPosteriorPlot == FALSE | !is.null(DPMMContainer[["priorPosteriorPlotContainer"]])) {
+  if (!ready || !options$priorPosteriorPlot || !is.null(DPMMContainer[["priorPosteriorPlotContainer"]])) {
     return()
   }
   priorPosteriorPlotContainer <- createJaspContainer(title = "Prior, Posterior Plot",position = 4)
@@ -214,7 +205,7 @@ DPMM <- function(jaspResults, options, dataset) {
 
 .createClusterDensityPlot <- function(DPMMContainer, options, ready, dataset) {
   # Trace plots
-  if (options$clusterDensityPlot == FALSE | !is.null(DPMMContainer[["clusterDensityPlotContainer"]])) {
+  if (!ready || !options$clusterDensityPlot || !is.null(DPMMContainer[["clusterDensityPlotContainer"]])) {
     return()
   }
   clusterDensityPlotContainer <- createJaspContainer(title = "Cluster Density Plot", position = 5)
@@ -223,7 +214,7 @@ DPMM <- function(jaspResults, options, dataset) {
   # save to DPMM container
   DPMMContainer[["clusterDensityPlotContainer"]] <- clusterDensityPlotContainer
   
-  mymodel <- DPMMContainer[["model"]]$object
+  myModel <- DPMMContainer[["model"]]$object
   
   # Create Jasp plot for Prior posterior plot
   clusterDensityPlot <- createJaspPlot(title = "Plot: ", width = 400, height = 500)
@@ -234,7 +225,7 @@ DPMM <- function(jaspResults, options, dataset) {
   clusterDensityPlotContainer[["clusterDensityPlot"]] <- clusterDensityPlot
   # Run fill the plot
   
-  newData <- data.frame(dataset, Clusters = mymodel$clusterLabels)
+  newData <- data.frame(dataset, Clusters = myModel$clusterLabels)
   p <- ggplot2::ggplot(newData, ggplot2::aes(x = dataset, fill = as.factor(Clusters))) +
     ggplot2::geom_density(alpha = 0.5) +
     ggplot2::scale_fill_discrete(name = "Cluster") +
@@ -246,7 +237,7 @@ DPMM <- function(jaspResults, options, dataset) {
 }
 
 .createClusterTable <- function(DPMMContainer, options, ready, dataset){
-  if (options$tableCluster == FALSE | !is.null(DPMMContainer[["clusterTableContainer"]])) {
+  if (!ready || !options$tableCluster || !is.null(DPMMContainer[["clusterTableContainer"]])) {
     return()
   }
   
@@ -283,45 +274,39 @@ DPMM <- function(jaspResults, options, dataset) {
   DPMMClusterTable$showSpecifiedColumnsOnly <- TRUE
   
   DPMMClusterTable$title <- paste0("Table: ", options$dependent, " and Cluster summary")
-  DPMMClusterTable$addFootnote(gettextf("If the sample size (N) is insufficiently small, it is not be possible to calculate the HDI and and will be epmty"))
+  
   
   #load model
-  mymodel <- DPMMContainer[["model"]]$object
+  myModel <- DPMMContainer[["model"]]$object
   #add data with clusters
-  newData <- data.frame(Value = dataset, cluster = mymodel$clusterLabels)
+  newData <- data.frame(Value = dataset, cluster = myModel$clusterLabels)
  
   
- 
-  if (options$clusterAdditionalInfo == TRUE) {
-    ci_hdi <- data.frame(cluster = NA, lowerCi = NA, upperCi = NA)  # Initialize an empty data frame
+ # calculate HDI per cluster, if and for loop needed because clusters can be different
+  if (options$clusterAdditionalInfo) {
+    ciHdi <- data.frame(cluster = NA, lowerCi = NA, upperCi = NA)  # Initialize an empty data frame
     
-    for (i in 1:mymodel$numberClusters) {
+    for (i in 1:myModel$numberClusters) {
       clus <- i
-      subset_data <- newData[newData$cluster == clus, ]
-      if(dplyr::count(subset_data) > 10) {
-      ci_result <- bayestestR::hdi(subset_data$Value, ci = options$clusterCiLevel)
-      ci_hdi[i,"cluster"] <- clus
-      ci_hdi[i, "lowerCi"] <- ci_result$CI_low
-      ci_hdi[i, "upperCi"] <- ci_result$CI_high
-      } else {
-        ci_hdi[i,"cluster"] <- clus
-        ci_hdi[i, "lowerCi"] <- NA
-        ci_hdi[i,"upperCi"] <- NA
+      subsetData <- newData[newData$cluster == clus, ]
+      ciResult <- bayestestR::hdi(subsetData$Value, ci = options$clusterCiLevel)
+      ciHdi[i, "lowerCi"] <- ciResult$CI_low
+      ciHdi[i, "upperCi"] <- ciResult$CI_high
+      ciHdi[i,"cluster"] <- clus
     }
-    
-   
+    if(any(is.na(ciHdi))){
+    DPMMClusterTable$addFootnote(gettext("Some HDI's could not be computed, because N is insufficiently small or the interval % too large. Possibly change the prior, hyperparmeter values or increase iterations to get better cluster estimates or decrease the HDI %."))
     }
-  }
+    }
   #summarized data
   clusterSummary <- dplyr::group_by(newData, cluster)
   clusterSummary <- dplyr::summarize(clusterSummary,
                                      mean = round(mean(Value),3),
                                      sd = round(sd(Value),3),
                                      n = round(length(Value),0))
-  clusterSummary <- merge(clusterSummary, ci_hdi, by = "cluster")
+  clusterSummary <- merge(clusterSummary, ciHdi, by = "cluster")
                     
   clusterSummary <- as.data.frame(clusterSummary)
-  print(clusterSummary)
   DPMMClusterTable$setExpectedSize(rows = length(clusterSummary$cluster))
  
   
@@ -334,4 +319,22 @@ DPMM <- function(jaspResults, options, dataset) {
   return()
 }
   
-
+.clusterPredictionsToData <- function(dataset, options, DPMMContainer, ready) {
+  if (!ready || !options[["addPredictions"]] || options[["predictionsColumn"]] == "") {
+    return()
+  }
+  #load model
+  myModel <- DPMMContainer[["model"]]$object
+  #add data with clusters
+  data <- data.frame(Value = dataset, cluster = myModel$clusterLabels)
+  if (is.null(DPMMContainer[["predictionsColumn"]])) {
+    predictions <- as.character(data[["cluster"]])
+    predictionsColumn <- predictions
+    predictionsColumn <- factor(predictionsColumn)
+    DPMMContainer[["predictionsColumn"]] <- createJaspColumn(columnName = options[["predictionsColumn"]])
+    DPMMContainer[["predictionsColumn"]]$dependOn(options = c("predictionsColumn", "addPredictions"))
+    # make sure to create to classification column with the same type as the target!
+    DPMMContainer[["predictionsColumn"]]$setOrdinal(predictionsColumn)
+  }
+  return()
+}
