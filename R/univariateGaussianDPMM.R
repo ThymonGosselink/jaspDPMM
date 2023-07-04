@@ -48,7 +48,8 @@ univariateGaussianDPMM <- function(jaspResults, options, dataset) {
   # scale data
   if (options$dependentScaled) {
     dataset <- scale(dataset)
-  } else { # added this line of code because if the scale function is not used the data might not be a matrix
+  } else { # added this line of code because if the scale function is not 
+           # used the data might not be a matrix
     dataset <- as.matrix(dataset)
   }
   return(dataset)
@@ -63,8 +64,9 @@ univariateGaussianDPMM <- function(jaspResults, options, dataset) {
 .getDPMMContainer <- function(jaspResults,options) {
   if (is.null(jaspResults[["DPMMContainer"]])) {
     #create container
-    DPMMContainer <- createJaspContainer(title = "Univariate Dirichlet Process Mixture Model",position = 1)
-    # we set the dependencies on the container, this means that all items inside the container automatically have these dependencies
+    DPMMContainer <- createJaspContainer(title    = "Univariate Dirichlet Process Mixture Model",
+                                         position = 1)
+    # Set the dependencies on the container
     DPMMContainer$dependOn(c("dependent", "scaleDependent", "muPrior", 
                              "kPrior", "alphaPrior", "betaPrior",
                              "mcmcBurnin", "mcmcSamples","alpha",
@@ -116,12 +118,21 @@ univariateGaussianDPMM <- function(jaspResults, options, dataset) {
     set.seed(options[["seed"]])
   }
     dp<- dirichletprocess::DirichletProcessGaussian(dataset,
-                                                    g0Priors = c(options$muPrior,options$kPrior,options$alphaPrior,options$betaPrior),
-                                                    alphaPriors = c(options$alpha,options$kluster))
-    
+                                                    g0Priors = c(options$muPrior,
+                                                                 options$kPrior,
+                                                                 options$alphaPrior,
+                                                                 options$betaPrior),
+                                                    alphaPriors = c(options$alpha,
+                                                                    options$kluster))
+
     # Fit the model
-    dpFit <- dirichletprocess::Fit(dp, its = options$mcmcSamples, progressBar = TRUE)
-    dpBurn <- dirichletprocess::Burn(dpFit, niter = options$mcmcBurnin)
+    dpFit <- dirichletprocess::Fit(dp, 
+                                   its = options$mcmcSamples, 
+                                   progressBar = TRUE)
+    # specify burnin
+    dpBurn <- dirichletprocess::Burn(dpFit, 
+                                     niter = options$mcmcBurnin)
+    # save it
     model <- dpBurn
     DPMMContainer[["model"]] <- createJaspState(object = model)
   }
@@ -134,7 +145,7 @@ univariateGaussianDPMM <- function(jaspResults, options, dataset) {
     return()
   }
   tracePlotsContrainer <- createJaspContainer(title = "Trace Plots",position = 3)
-  # we set the dependencies on the container, this means that all items inside the container automatically have these dependencies
+  # Set the dependencies on the container.
   tracePlotsContrainer$dependOn(c("traceplots"))
   # save to DPMM container
   DPMMContainer[["tracePlotsContrainer"]] <- tracePlotsContrainer
