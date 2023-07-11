@@ -59,12 +59,12 @@ Section{
 	title: qsTr("Prior")
 		Group
 		{
-			title:		qsTr("Prior distribution (Inverse-Gamma distribution)") 
-			id:	prioroptions
+			title:		qsTr("Prior distribution (Normal Inverse-Gamma distribution)") 
+			id:	basePriorOptions
 
 		DoubleField
 		{
-			name:			"muPrior"
+			name:			"muBasePrior"
 			label:			qsTr("Mu")
 			defaultValue:	0
 			min:			-1000000000
@@ -73,15 +73,15 @@ Section{
 
 		IntegerField
 		{
-			name:			"kPrior"
-			label:			qsTr("K")
+			name:			"kBasePrior"
+			label:			qsTr("K or the shape parameter of the normal distribution")
 			defaultValue:	1
 			min:			1
 		}
 		
 		DoubleField
 		{
-			name:			"alphaPrior"
+			name:			"alphaBasePrior"
 			label:			qsTr("Alpha (Shape)")
 			defaultValue:	1
 			min:			0.1
@@ -90,18 +90,14 @@ Section{
 		
 		DoubleField
 		{
-			name:			"betaPrior"
+			name:			"betaBasePrior"
 			label:			qsTr("Beta (Scale)")
 			defaultValue:	1
 			min:			0.1
 			decimals:		1
 		}
 		
-		CheckBox{
-		name: "priorPlot"
-		label:			qsTr("Plot Prior distribution")
-		checked: true
-	}
+		
 		}
 	
 }
@@ -136,27 +132,33 @@ Section{
 		}
 
 	Section{
-		title: qsTr("Hyper-parameters options")
-		id: hyperoptions
+		title: qsTr("Alpha (precision parameter) Inverse-Gamma Prior Options")
+		id: alphaOptions
 
 		
 	DoubleField
 		{
-			name:			"alpha"
-			label:			qsTr("Alpha")
+			name:			"aAlphaPrior"
+			label:			qsTr("a (shape parameter)")
 			defaultValue:	1
 			min: 			0.1
-			decimals:		1
+			decimals:		2
 		}
 
 		IntegerField
 		{
-			name:			"kluster"
-			label:			qsTr("kluster")
+			name:			"bAlphaPrior"
+			label:			qsTr("b (rate parameter)")
 			defaultValue:	1
 			min:			1
 		}
-		
+
+		CheckBox
+		{
+		name: "priorPlot"
+		label:			qsTr("Plot Inverse-Gamma distribution")
+		checked: true
+		}	
 	
 	}
 
@@ -199,7 +201,7 @@ CIField  { name: "clusterCiLevel";	label: qsTr("Credible interval") }
 		id:							addPredictions
 		name:						"addPredictions"
 		text:						qsTr("Add predictions to data")
-		checked: true
+		checked: false
 
 		ComputedColumnField 
 		{
@@ -211,7 +213,7 @@ CIField  { name: "clusterCiLevel";	label: qsTr("Credible interval") }
 			enabled:				addPredictions.checked
 		}
 	}
-	
+
 Group{
 	FileSelector
 		{
