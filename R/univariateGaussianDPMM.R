@@ -97,7 +97,9 @@ univariateGaussianDPMM <- function(jaspResults, options, dataset) {
   
   priorPlot$dependOn(options = c("priorPlot"))
   
-  priorPlot$addCitation("JASP Team (2023). JASP (Version  17.2.0) [Computer software].")
+  priorPlot$addCitation("JASP Team (2023). JASP (Version  17.2.0) [Computer software].,
+                        Ross, G. J., & Markwick, D. (2018). dirichletprocess: 
+                        An R package for fitting complex Bayesian nonparametric models.")
   
   DPMMContainer[["priorPlot"]] <- priorPlot
   
@@ -178,7 +180,9 @@ univariateGaussianDPMM <- function(jaspResults, options, dataset) {
   # Create and fill the three plots:
   # - Create trace plot for Alpha:
   tracePlotAlpha <- createJaspPlot(title = "Trace Plot Alpha",  width = 500, height = 600)
-  tracePlotAlpha$addCitation("JASP Team (2023). JASP (Version  17.2.1) [Computer software].")
+  tracePlotAlpha$addCitation("JASP Team (2023). JASP (Version  17.2.1) [Computer software].,
+                             Ross, G. J., & Markwick, D. (2018). dirichletprocess:
+                             An R package for fitting complex Bayesian nonparametric models.")
   tracePlotsContainer[["tracePlotAlpha"]] <- tracePlotAlpha
   # Fill the plot
   tracePlotAlpha$plotObject  <- dirichletprocess::AlphaTraceplot(myModel, gg = TRUE) +
@@ -189,7 +193,9 @@ univariateGaussianDPMM <- function(jaspResults, options, dataset) {
   
   # - Create trace plot for Cluster:
   tracePlotCluster <- createJaspPlot(title = "Trace Plot Cluster",  width = 500, height = 600)
-  tracePlotCluster$addCitation("JASP Team (2023). JASP (Version  17.2.1) [Computer software].")
+  tracePlotCluster$addCitation("JASP Team (2023). JASP (Version  17.2.1) [Computer software].
+                               Ross, G. J., & Markwick, D. (2018). dirichletprocess:
+                               An R package for fitting complex Bayesian nonparametric models.")
   # assign the plot to jaspResults
   tracePlotsContainer[["tracePlotCluster"]] <- tracePlotCluster
   # Run fill the plot
@@ -202,7 +208,9 @@ univariateGaussianDPMM <- function(jaspResults, options, dataset) {
   # - Create Jasp plot for likelihood:
   tracePlotLikelihood <- createJaspPlot(title = "Trace Plot Likelihood",  width = 500, height = 600)
   # tracePlotLikelihood$dependOn(options = "tracePlots")
-  tracePlotLikelihood$addCitation("JASP Team (2023). JASP (Version  17.3.0) [Computer software].")
+  tracePlotLikelihood$addCitation("JASP Team (2023). JASP (Version  17.3.0) [Computer software].
+                                  Ross, G. J., & Markwick, D. (2018). 
+                                  dirichletprocess: An R package for fitting complex Bayesian nonparametric models.")
   # now we assign the plot to jaspResults
   tracePlotsContainer[["tracePlotLikelihood"]] <- tracePlotLikelihood
   # Run fill the plot
@@ -231,7 +239,9 @@ univariateGaussianDPMM <- function(jaspResults, options, dataset) {
   
   # Create Jasp plot for Prior posterior plot
   priorPosteriorPlot <- createJaspPlot(title = "Plot:",  width = 500, height = 600)
-  priorPosteriorPlot$addCitation("JASP Team (2023). JASP (Version  17.3.0) [Computer software].")
+  priorPosteriorPlot$addCitation("JASP Team (2023). JASP (Version  17.3.0) [Computer software],
+                                 Ross, G. J., & Markwick, D. (2018).
+                                 dirichletprocess: An R package for fitting complex Bayesian nonparametric models.")
   
   # now we assign the plot to jaspResults
   priorPosteriorPlotContainer[["priorPosteriorPlot"]] <- priorPosteriorPlot
@@ -259,7 +269,9 @@ univariateGaussianDPMM <- function(jaspResults, options, dataset) {
   
   # Create Jasp plot for Prior posterior plot
   clusterDensityPlot <- createJaspPlot(title = "Plot: ", width = 500, height = 600)
-  clusterDensityPlot$addCitation("JASP Team (2023). JASP (Version 17.2.1) [Computer software].")
+  clusterDensityPlot$addCitation("JASP Team (2023). JASP (Version 17.2.1) [Computer software],
+                                 Ross, G. J., & Markwick, D. (2018). dirichletprocess: 
+                                 An R package for fitting complex Bayesian nonparametric models.")
   # now we assign the plot to jaspResults
   clusterDensityPlotContainer[["clusterDensityPlot"]] <- clusterDensityPlot
   
@@ -271,13 +283,14 @@ univariateGaussianDPMM <- function(jaspResults, options, dataset) {
   # run the plot
   p <- ggplot2::ggplot(clusterData, ggplot2::aes(x = dataset, fill = as.factor(Cluster))) +
     ggplot2::geom_density(alpha = 0.5) +
-    ggplot2::scale_fill_discrete(name = "Cluster") +
-    ggplot2::theme_minimal() +
-    ggplot2::xlab(colnames(dataset))
+    ggplot2::xlab(colnames(dataset)) + 
+    ggplot2::scale_x_continuous(limits = c(min(dataset)-1, max(dataset)+1))
   
   clusterDensityPlot$plotObject <- p +
     jaspGraphs::geom_rangeframe() +
-    jaspGraphs::themeJaspRaw()
+    jaspGraphs::themeJaspRaw() + 
+    ggplot2::theme(legend.position="top") +
+    ggplot2::scale_fill_discrete(name = "Cluster")
   
   return()  
 }
@@ -310,6 +323,9 @@ univariateGaussianDPMM <- function(jaspResults, options, dataset) {
   
   # SD column
   DPMMClusterTable$addColumnInfo(title = gettext("SD"), name = "sd",  type = "number")
+  
+  # Weight column
+  DPMMClusterTable$addColumnInfo(title = gettext("Weight"), name = "weight",  type = "number")
   
   # add Highest density interval column If options additional = TRUE
   if (options[["clusterAdditionalInfo"]]) {
@@ -355,12 +371,15 @@ univariateGaussianDPMM <- function(jaspResults, options, dataset) {
                        "increase iterations, to get better cluster estimates.")))
     }
   }
-  #summarized data
   clusterSummary <- dplyr::group_by(clusterData, cluster)
+  
+  # summarize
   clusterSummary <- dplyr::summarize(clusterSummary,
-                                     mean = round(mean(Value),3),
-                                     sd = round(sd(Value),3),
-                                     n = round(length(Value),0))
+                                     mean = round(mean(Value), 3),
+                                     sd = round(sd(Value), 3),
+                                     n = round(length(Value), 0))
+  # add weights
+  clusterSummary <- cbind(clusterSummary, weight = myModel[["weights"]])
  
    # add the HDI IF additional info = TRUE
   if(options[["clusterAdditionalInfo"]]){
@@ -378,6 +397,7 @@ univariateGaussianDPMM <- function(jaspResults, options, dataset) {
   # add the rows
   DPMMClusterTable$addRows(list(cluster = clusterSummary[["cluster"]], mean = clusterSummary[["mean"]], 
                                 sd = clusterSummary[["sd"]], n = clusterSummary[["n"]], 
+                                weight = clusterSummary[["weight"]],
                                 lowerCi = clusterSummary[["lowerCi"]], upperCi = clusterSummary[["upperCi"]]))
   
   # add the data
