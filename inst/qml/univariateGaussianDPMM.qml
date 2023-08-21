@@ -56,7 +56,7 @@ Form {
 	
 		
 Section{
-	title: qsTr("Prior")
+	title: qsTr("Prior options")
 		Group
 		{
 			title:		qsTr("Prior distribution (Normal Inverse-Gamma distribution)") 
@@ -102,7 +102,37 @@ Section{
 	
 }
 
+Section{
+		title: qsTr("Alpha options (precision parameter)")
+		id: alphaOptions
 
+		
+	DoubleField
+		{
+			name:			"aAlphaPrior"
+			label:			qsTr("α (shape parameter)")
+			defaultValue:	1
+			min: 			0.1
+			decimals:		2
+		}
+
+		DoubleField
+		{
+			name:			"bAlphaPrior"
+			label:			qsTr("β (rate parameter)")
+			defaultValue:	1
+			min:			0.1
+			decimals:		2
+		}
+
+		CheckBox
+		{
+		name: "priorPlot"
+		label:			qsTr("Plot theoretical Gamma distribution")
+		checked: false
+		}	
+	
+	}
 
 
 		 
@@ -131,36 +161,7 @@ Section{
 	}
 		}
 
-	Section{
-		title: qsTr("Alpha (precision parameter) Inverse-Gamma Prior Options")
-		id: alphaOptions
-
-		
-	DoubleField
-		{
-			name:			"aAlphaPrior"
-			label:			qsTr("a (shape parameter)")
-			defaultValue:	1
-			min: 			0.1
-			decimals:		2
-		}
-
-		IntegerField
-		{
-			name:			"bAlphaPrior"
-			label:			qsTr("b (rate parameter)")
-			defaultValue:	1
-			min:			1
-		}
-
-		CheckBox
-		{
-		name: "priorPlot"
-		label:			qsTr("Plot Inverse-Gamma distribution")
-		checked: true
-		}	
 	
-	}
 
 	Section{
 		title: qsTr("Plots and tables")

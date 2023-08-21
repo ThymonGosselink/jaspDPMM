@@ -1,11 +1,12 @@
-univariateGaussianDPMM <- function(jaspResults, options, dataset) {
+univariateGaussianDPMM <- function(jaspResults, options, dataset = NULL) {
 
-  ready <- (length(options[["dependent"]]) > 0)
+  ready <- (options[["dependent"]] != "")
   if (ready) {
     dataset <- .DPMMReadData(options, dataset)
+    .DPMMCheckErrors(options, dataset)
   }
   
-  .DPMMCheckErrors(options, dataset)
+  
   
   DPMMContainer <- .getDPMMContainer(jaspResults, options, ready)
   
@@ -64,9 +65,7 @@ univariateGaussianDPMM <- function(jaspResults, options, dataset) {
 
 # main container
 .getDPMMContainer <- function(jaspResults, options, ready) {
-  if(!ready){ 
-    return()
-  }
+  
   
   if(is.null(jaspResults[["DPMMContainer"]])) {
     #create container
@@ -88,7 +87,7 @@ univariateGaussianDPMM <- function(jaspResults, options, dataset) {
 # Prior plot of alpha
 .createPlotPriorDensityAlpha <- function(options, DPMMContainer, ready) {
   # plot prior
-  if (!options[["priorPlot"]] || !is.null(DPMMContainer[["priorPlot"]]) || !ready) {
+  if (!options[["priorPlot"]] || !is.null(DPMMContainer[["priorPlot"]])) {
     return()
   }
   
@@ -103,7 +102,11 @@ univariateGaussianDPMM <- function(jaspResults, options, dataset) {
   
   DPMMContainer[["priorPlot"]] <- priorPlot
   
-  x <- seq(from=0.1, to=40, by=0.1)
+  # using qgamma to make sure the range is right
+  x <- seq(from = 0, to = qgamma(.999999999, shape = options[["aAlphaPrior"]],
+                                 scale = options[["bAlphaPrior"]]), 
+                                 by = 0.1)
+           
   
   # create the distribution
   gamma <- data.frame(x = x, Prior = dgamma(x,
@@ -205,7 +208,7 @@ univariateGaussianDPMM <- function(jaspResults, options, dataset) {
   
   
   
-  # - Create Jasp plot for likelihood:
+  # Create Jasp plot for likelihood:
   tracePlotLikelihood <- createJaspPlot(title = "Trace Plot Likelihood",  width = 500, height = 600)
   # tracePlotLikelihood$dependOn(options = "tracePlots")
   tracePlotLikelihood$addCitation("JASP Team (2023). JASP (Version  17.3.0) [Computer software].
@@ -297,7 +300,7 @@ univariateGaussianDPMM <- function(jaspResults, options, dataset) {
 
 # A nice table with dependent and cluster information
 .createClusterTable <- function(DPMMContainer, options, ready, dataset) {
-  if (!ready || !options[["tableCluster"]] || !is.null(DPMMContainer[["clusterTableContainer"]])) {
+  if (!options[["tableCluster"]] || !is.null(DPMMContainer[["clusterTableContainer"]])) {
     return()
   }
   
@@ -343,7 +346,9 @@ univariateGaussianDPMM <- function(jaspResults, options, dataset) {
   
   DPMMClusterTable$title <- paste0("Table: ", options[["dependent"]], " and Cluster summary")
   
+  clusterTableContainer[["DPMMClusterTable"]] <- DPMMClusterTable
   
+  if(ready){
   #load model
   myModel <- DPMMContainer[["model"]]$object
   #add data with clusters
@@ -392,7 +397,7 @@ univariateGaussianDPMM <- function(jaspResults, options, dataset) {
   DPMMClusterTable$setExpectedSize(rows = length(clusterSummary[["cluster"]]))
   
   
-  clusterTableContainer[["DPMMClusterTable"]] <- DPMMClusterTable
+  
   
   # add the rows
   DPMMClusterTable$addRows(list(cluster = clusterSummary[["cluster"]], mean = clusterSummary[["mean"]], 
@@ -402,6 +407,8 @@ univariateGaussianDPMM <- function(jaspResults, options, dataset) {
   
   # add the data
   DPMMClusterTable$setData(clusterSummary)
+  
+  }
   return()
 }
 
