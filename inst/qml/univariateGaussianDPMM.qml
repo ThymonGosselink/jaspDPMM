@@ -215,27 +215,7 @@ CIField  { name: "clusterCiLevel";	label: qsTr("Credible interval") }
 		}
 	}
 
-Group{
-	FileSelector
-		{
-			id:						savePath
-			name:					"savePath"
-			label:					qsTr("Save as")
-			placeholderText:		qsTr("e.g., location/model.jaspML")
-			filter:					"*.jaspML"
-			save:					true
-			fieldWidth:				180 * preferencesModel.uiScale
-		}
 
-		CheckBox
-		{
-			id:						saveModel
-			name:					"saveModel"
-			text:					qsTr("Save trained model")
-			enabled:				showSave && savePath.value != ""
-			Layout.leftMargin:		10 * preferencesModel.uiScale
-		}
-}
 		}
 }
 
