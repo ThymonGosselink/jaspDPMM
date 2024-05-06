@@ -1,4 +1,3 @@
 # jaspDPMM
 
-A Dirichlet Process Mixture Model for clustering univariate data using the dirichletprocess package in R.
-The code is for JASP a open source program making statistics easy. By using R and QML I programmed the interface and output in JASP.
+A Dirichlet Process Mixture Model for clustering univariate data utilizing the dirichletprocess package in R. This code supports JASP, an open-source program designed to simplify statistical analysis. I developed the interface and output in JASP by programming with R and QML.
